@@ -1,7 +1,7 @@
 package gRPC
 
 import (
-	gRPC2 "Demonstration-Service/api/gRPC"
+	"Demonstration-Service/api/grpcAPI"
 	"Demonstration-Service/internal/Application/Contracts/OrdersServices"
 	"Demonstration-Service/internal/Presentation/Servers/gRPC/convert"
 	"context"
@@ -11,7 +11,7 @@ import (
 )
 
 type Server struct {
-	gRPC2.UnimplementedOrderServiceServer
+	grpcAPI.UnimplementedOrderServiceServer
 	service OrdersServices.IGetService
 }
 
@@ -19,7 +19,7 @@ func NewServer(service OrdersServices.IGetService) *Server {
 	return &Server{service: service}
 }
 
-func (s *Server) GetOrder(ctx context.Context, req *gRPC2.GetOrderRequest) (*gRPC2.GetOrderResponse, error) {
+func (s *Server) GetOrder(ctx context.Context, req *grpcAPI.GetOrderRequest) (*grpcAPI.GetOrderResponse, error) {
 	orderId := req.GetId()
 	if orderId == "" {
 		return nil, status.Error(codes.InvalidArgument, "Order ID cannot be empty")
@@ -37,5 +37,5 @@ func (s *Server) GetOrder(ctx context.Context, req *gRPC2.GetOrderRequest) (*gRP
 	}
 	pbOrder := convert.OrderToPb(order)
 
-	return &gRPC2.GetOrderResponse{Order: &pbOrder}, nil
+	return &grpcAPI.GetOrderResponse{Order: &pbOrder}, nil
 }

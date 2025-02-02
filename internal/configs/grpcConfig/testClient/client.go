@@ -1,7 +1,7 @@
 package main
 
 import (
-	"Demonstration-Service/api/gRPC"
+	"Demonstration-Service/api/grpcAPI"
 	"context"
 	"fmt"
 	"log"
@@ -27,9 +27,9 @@ func main() {
 		}
 	}()
 
-	client := gRPC.NewOrderServiceClient(conn)
+	client := grpcAPI.NewOrderServiceClient(conn)
 	orderId := "123"
-	req := &gRPC.GetOrderRequest{
+	req := &grpcAPI.GetOrderRequest{
 		Id: orderId,
 	}
 

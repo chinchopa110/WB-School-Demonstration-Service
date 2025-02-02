@@ -4,7 +4,7 @@
 // - protoc             v5.29.1
 // source: proto/order.proto
 
-package gRPC
+package grpcAPI
 
 import (
 	context "context"
