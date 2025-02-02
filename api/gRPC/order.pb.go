@@ -4,7 +4,7 @@
 // 	protoc        v5.29.1
 // source: proto/order.proto
 
-package api
+package gRPC
 
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"

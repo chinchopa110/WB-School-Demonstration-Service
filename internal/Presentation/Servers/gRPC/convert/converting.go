@@ -1,15 +1,15 @@
 package convert
 
 import (
+	"Demonstration-Service/api/gRPC"
 	"Demonstration-Service/internal/Application/Domain"
-	"Demonstration-Service/internal/Presentation/Servers/gRPC/api"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-func OrderToPb(order Domain.Order) api.Order {
-	pbItems := make([]*api.Item, len(order.Items))
+func OrderToPb(order Domain.Order) gRPC.Order {
+	pbItems := make([]*gRPC.Item, len(order.Items))
 	for i, item := range order.Items {
-		pbItems[i] = &api.Item{
+		pbItems[i] = &gRPC.Item{
 			ChrtId:      int32(item.ChrtID),
 			TrackNumber: item.TrackNumber,
 			Price:       int32(item.Price),
@@ -23,11 +23,11 @@ func OrderToPb(order Domain.Order) api.Order {
 			Status:      int32(item.Status),
 		}
 	}
-	return api.Order{
+	return gRPC.Order{
 		OrderUid:    order.OrderUID,
 		TrackNumber: order.TrackNumber,
 		Entry:       order.Entry,
-		Delivery: &api.Delivery{
+		Delivery: &gRPC.Delivery{
 			Name:    order.Delivery.Name,
 			Phone:   order.Delivery.Phone,
 			Zip:     order.Delivery.Zip,
@@ -36,7 +36,7 @@ func OrderToPb(order Domain.Order) api.Order {
 			Region:  order.Delivery.Region,
 			Email:   order.Delivery.Email,
 		},
-		Payment: &api.Payment{
+		Payment: &gRPC.Payment{
 			Transaction:  order.Payment.Transaction,
 			RequestId:    order.Payment.RequestID,
 			Currency:     order.Payment.Currency,

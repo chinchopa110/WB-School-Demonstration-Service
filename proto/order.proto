@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package order;
 
-option go_package = "Demonstration-Service/api";
+option go_package = "Demonstration-Service/api/gRPC";
 
 import "google/protobuf/timestamp.proto";
 

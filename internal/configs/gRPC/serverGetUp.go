@@ -1,9 +1,9 @@
 package gRPC
 
 import (
+	gRPC2 "Demonstration-Service/api/gRPC"
 	"Demonstration-Service/internal/Application/Contracts/OrdersServices"
 	"Demonstration-Service/internal/Presentation/Servers/gRPC"
-	"Demonstration-Service/internal/Presentation/Servers/gRPC/api"
 	"google.golang.org/grpc"
 	"log"
 	"net"
@@ -18,7 +18,7 @@ func ServerGetUp(service OrdersServices.IGetService) {
 	grpcServer := grpc.NewServer()
 
 	orderService := gRPC.NewServer(service)
-	api.RegisterOrderServiceServer(grpcServer, orderService)
+	gRPC2.RegisterOrderServiceServer(grpcServer, orderService)
 
 	if err := grpcServer.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
