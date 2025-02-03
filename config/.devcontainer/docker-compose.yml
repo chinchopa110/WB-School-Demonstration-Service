@@ -1,0 +1,55 @@
+version: '3.8'
+
+volumes:
+  postgres-data:
+  redis-data:
+  kafka-data:
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: ../build/Dockerfile
+    env_file:
+      - .env
+    command: sleep infinity
+    depends_on:
+      - db
+    network_mode: service:db
+
+  redis:
+    image: redis:latest
+    restart: unless-stopped
+    volumes:
+      - redis-data:/data
+
+  kafka:
+    image: bitnami/kafka:latest
+    restart: unless-stopped
+    volumes:
+      - kafka-data:/bitnami/kafka
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_CFG_LISTENERS: PLAINTEXT://0.0.0.0:9092
+      KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_CFG_ZOOKEEPER_CONNECT: zookeeper:2181
+      ALLOW_PLAINTEXT_LISTENER: "yes"
+    depends_on:
+      - zookeeper
+
+  zookeeper:
+    image: bitnami/zookeeper:latest
+    restart: unless-stopped
+    ports:
+      - "2181:2181"
+
+  db:
+    image: postgres:latest
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    env_file:
+      - .env

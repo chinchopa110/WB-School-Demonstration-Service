@@ -1,0 +1,24 @@
+FROM golang:1.21 as builder
+
+WORKDIR /app
+
+COPY go.mod go.sum ./
+
+RUN go mod download
+
+COPY . .
+
+RUN go build -o main ./cmd/app/main.go
+
+FROM alpine:latest
+
+WORKDIR /app
+
+COPY --from=builder /app/main .
+
+COPY --from=builder /app/migrations /app/migrations
+
+COPY ./logs ./logs
+
+ENTRYPOINT ["/app/main"]
+
