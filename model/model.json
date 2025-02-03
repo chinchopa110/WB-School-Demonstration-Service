@@ -1,0 +1,179 @@
+{
+  "order_uid": {
+    "type": "string",
+    "description": "Уникальный идентификатор заказа (UUID)"
+  },
+  "track_number": {
+    "type": "string",
+    "description": "Трек-номер заказа"
+  },
+  "entry": {
+    "type": "string",
+    "description": "Идентификатор внешней системы"
+  },
+  "delivery": {
+    "type": "object",
+    "description": "Информация о доставке",
+    "properties": {
+      "name": {
+        "type": "string",
+        "description": "Имя получателя"
+      },
+      "phone": {
+        "type": "string",
+        "description": "Телефонный номер получателя"
+      },
+      "zip": {
+        "type": "string",
+        "description": "Почтовый индекс получателя"
+      },
+      "city": {
+        "type": "string",
+        "description": "Город получателя"
+      },
+      "address": {
+        "type": "string",
+        "description": "Адрес получателя"
+      },
+      "region": {
+        "type": "string",
+        "description": "Регион получателя"
+      },
+      "email": {
+        "type": "string",
+        "description": "Адрес электронной почты получателя"
+      }
+    }
+  },
+  "payment": {
+    "type": "object",
+    "description": "Информация об оплате",
+    "properties": {
+      "transaction": {
+        "type": "string",
+        "description": "Идентификатор транзакции (UUID или транзакция ID)"
+      },
+      "request_id": {
+        "type": "string",
+        "description": "Идентификатор запроса (необязательный)"
+      },
+      "currency": {
+        "type": "string",
+        "description": "Код валюты (например, USD)"
+      },
+      "provider": {
+        "type": "string",
+        "description": "Провайдер оплаты"
+      },
+      "amount": {
+        "type": "integer",
+        "description": "Сумма платежа в центах"
+      },
+      "payment_dt": {
+        "type": "integer",
+        "description": "Дата и время платежа в формате Unix timestamp"
+      },
+      "bank": {
+        "type": "string",
+        "description": "Банк-эмитент"
+      },
+      "delivery_cost": {
+        "type": "integer",
+        "description": "Стоимость доставки в центах"
+      },
+      "goods_total": {
+        "type": "integer",
+        "description": "Общая стоимость товаров в центах"
+      },
+      "custom_fee": {
+        "type": "integer",
+        "description": "Сумма таможенной пошлины в центах"
+      }
+    }
+  },
+  "items": {
+    "type": "array",
+    "description": "Список товаров в заказе",
+    "items": {
+      "type": "object",
+      "properties": {
+        "chrt_id": {
+          "type": "integer",
+          "description": "Идентификатор товара в системе (chart ID)"
+        },
+        "track_number": {
+          "type": "string",
+          "description": "Трек-номер товара"
+        },
+        "price": {
+          "type": "integer",
+          "description": "Цена товара в центах"
+        },
+        "rid": {
+          "type": "string",
+          "description": "Идентификатор запроса товара"
+        },
+        "name": {
+          "type": "string",
+          "description": "Название товара"
+        },
+        "sale": {
+          "type": "integer",
+          "description": "Скидка на товар в процентах"
+        },
+        "size": {
+          "type": "string",
+          "description": "Размер товара"
+        },
+        "total_price": {
+          "type": "integer",
+          "description": "Общая стоимость товара в центах"
+        },
+        "nm_id": {
+          "type": "integer",
+          "description": "Числовой идентификатор товара"
+        },
+        "brand": {
+          "type": "string",
+          "description": "Бренд товара"
+        },
+        "status": {
+          "type": "integer",
+          "description": "Статус товара"
+        }
+      }
+    }
+  },
+  "locale": {
+    "type": "string",
+    "description": "Языковая локаль (например, en, ru)"
+  },
+  "internal_signature": {
+    "type": "string",
+    "description": "Внутренняя подпись заказа (необязательная)"
+  },
+  "customer_id": {
+    "type": "string",
+    "description": "Идентификатор клиента"
+  },
+  "delivery_service": {
+    "type": "string",
+    "description": "Служба доставки"
+  },
+  "shardkey": {
+    "type": "string",
+    "description": "Ключ сегмента"
+  },
+  "sm_id": {
+    "type": "integer",
+    "description": "Идентификатор менеджера"
+  },
+  "date_created": {
+    "type": "string",
+    "description": "Дата и время создания заказа (ISO 8601 timestamp с часовым поясом)"
+  },
+  "oof_shard": {
+    "type": "string",
+    "description": "Сегмент OOF"
+  }
+}
