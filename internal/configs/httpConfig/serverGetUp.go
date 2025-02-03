@@ -13,7 +13,7 @@ import (
 func ServerGetUp(service OrdersServices.IGetService) {
 	server := HTTP.NewServer(service)
 
-	logger, err := configs.InitLogger("app.log")
+	logger, err := configs.InitLogger("logs/http.log")
 	if err != nil {
 		log.Fatalf("failed to initialize logger: %v", err)
 	}
