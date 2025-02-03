@@ -7,7 +7,6 @@ import (
 	"context"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"strconv"
 )
 
 type Server struct {
@@ -25,12 +24,7 @@ func (s *Server) GetOrder(ctx context.Context, req *grpcAPI.GetOrderRequest) (*g
 		return nil, status.Error(codes.InvalidArgument, "Order ID cannot be empty")
 	}
 
-	intOrderId, err := strconv.Atoi(orderId)
-	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "Invalid Order ID, must be an integer")
-	}
-
-	order, err := s.service.GetById(intOrderId)
+	order, err := s.service.GetById(orderId)
 
 	if err != nil {
 		return nil, status.Errorf(codes.NotFound, "order with id: %s, not found: %v", orderId, err)

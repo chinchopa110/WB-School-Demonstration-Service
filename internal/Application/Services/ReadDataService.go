@@ -16,7 +16,7 @@ func NewReadDataService(cashService Repos.IStorage, dbRepo Repos.IStorage) *Read
 	return &ReadDataService{cashRepo: cashService, dbRepo: dbRepo}
 }
 
-func (service *ReadDataService) GetById(id int) (Domain.Order, error) {
+func (service *ReadDataService) GetById(id string) (Domain.Order, error) {
 	order, err := service.cashRepo.Read(id)
 	if err == nil {
 		return order, nil
@@ -26,12 +26,12 @@ func (service *ReadDataService) GetById(id int) (Domain.Order, error) {
 
 	order, err = service.dbRepo.Read(id)
 	if err != nil {
-		return Domain.Order{}, fmt.Errorf("order not found in db for id: %d, %w", id, err)
+		return Domain.Order{}, fmt.Errorf("order not found in db for id: %s, %w", id, err)
 	}
 
 	err = service.cashRepo.Save(order)
 	if err != nil {
-		log.Printf("failed to save order in cash for id: %d, %v", id, err)
+		log.Printf("failed to save order in cash for id: %s, %v", id, err)
 	}
 
 	return order, nil

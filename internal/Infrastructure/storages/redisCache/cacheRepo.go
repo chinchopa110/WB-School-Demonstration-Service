@@ -29,6 +29,7 @@ func NewRedisRepository(client *redis.Client, expiration time.Duration) *RedisRe
 
 func (r *RedisRepository) IsExist(id string) bool {
 	ctx := context.Background()
+
 	exists, err := r.client.Exists(ctx, id).Result()
 	if err != nil {
 		return false

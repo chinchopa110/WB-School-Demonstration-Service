@@ -4,7 +4,6 @@ import (
 	"Demonstration-Service/internal/Application/Contracts/OrdersServices"
 	"encoding/json"
 	"net/http"
-	"strconv"
 )
 
 type Server struct {
@@ -21,15 +20,9 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	idStr := r.URL.Query().Get("id")
-	if idStr == "" {
+	id := r.URL.Query().Get("id")
+	if id == "" {
 		http.Error(w, "Missing id parameter", http.StatusBadRequest)
-		return
-	}
-
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		http.Error(w, "Invalid id parameter", http.StatusBadRequest)
 		return
 	}
 

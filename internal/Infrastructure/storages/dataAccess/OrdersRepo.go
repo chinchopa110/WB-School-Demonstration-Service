@@ -27,7 +27,7 @@ func (repo *OrdersRepo) IsExist(id string) bool {
 	return exists
 }
 
-func (repo *OrdersRepo) Read(id int) (Domain.Order, error) {
+func (repo *OrdersRepo) Read(id string) (Domain.Order, error) {
 	order := Domain.Order{}
 	var delivery Domain.Delivery
 	var payment Domain.Payment
@@ -63,7 +63,7 @@ func (repo *OrdersRepo) Read(id int) (Domain.Order, error) {
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return Domain.Order{}, fmt.Errorf("order with id %d not found: %w", id, err)
+			return Domain.Order{}, fmt.Errorf("order with id %s not found: %w", id, err)
 		}
 		return Domain.Order{}, fmt.Errorf("error reading order data: %w", err)
 	}
