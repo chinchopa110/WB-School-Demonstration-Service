@@ -6,7 +6,10 @@ import (
 )
 
 func Run() {
-	db := configs.GetUpSQL()
+	db, err := configs.GetUpSQL()
+	if err != nil {
+		log.Fatal(err) // TODO: UberZap
+	}
 
 	defer func() {
 		if err := db.Close(); err != nil {
