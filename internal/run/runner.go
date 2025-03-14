@@ -19,6 +19,9 @@ import (
 )
 
 func Run() {
+	//TODO: переписать с google/wire
+	
+
 	var wg sync.WaitGroup
 	ctx := context.Background()
 
