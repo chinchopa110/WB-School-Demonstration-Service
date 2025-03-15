@@ -12,7 +12,7 @@ type ReadDataService struct {
 	dbRepo   Repos.IStorage
 }
 
-func NewReadDataService(cashService Repos.IStorage, dbRepo Repos.IStorage) *ReadDataService {
+func NewReadDataService(cashService Repos.CashStorage, dbRepo Repos.DBStorage) *ReadDataService {
 	return &ReadDataService{cashRepo: cashService, dbRepo: dbRepo}
 }
 

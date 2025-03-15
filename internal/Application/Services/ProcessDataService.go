@@ -14,7 +14,7 @@ type ProcessDataService struct {
 	dbRepo   Repos.IStorage
 }
 
-func NewProcessDataService(cashService Repos.IStorage, dbRepo Repos.IStorage) *ProcessDataService {
+func NewProcessDataService(cashService Repos.CashStorage, dbRepo Repos.DBStorage) *ProcessDataService {
 	return &ProcessDataService{cashRepo: cashService, dbRepo: dbRepo}
 }
 

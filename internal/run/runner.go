@@ -1,106 +1,66 @@
 package run
 
 import (
+	"Demonstration-Service/internal/dependencyInjection"
 	"context"
 	"fmt"
 	"sync"
-	"time"
 
 	"go.uber.org/zap"
-
-	"Demonstration-Service/internal/Application/Services"
-	"Demonstration-Service/internal/Infrastructure/kafka"
-	"Demonstration-Service/internal/Infrastructure/post"
-	"Demonstration-Service/internal/Infrastructure/storages/dataAccess"
-	"Demonstration-Service/internal/Infrastructure/storages/redisCache"
-	"Demonstration-Service/internal/configs"
-	"Demonstration-Service/internal/configs/grpcConfig"
-	"Demonstration-Service/internal/configs/httpConfig"
 )
 
 func Run() {
-	//TODO: переписать с google/wire
-	
-
-	var wg sync.WaitGroup
 	ctx := context.Background()
 
-	logger, err := configs.InitLogger("logs/app.log")
+	app, err := dependencyInjection.InitializeApplication(ctx)
 	if err != nil {
-		fmt.Printf("Failed to initialize logger: %v\n", err)
+		fmt.Printf("Failed to initialize application: %v\n", err)
 		return
 	}
 	defer func() {
-		if err := logger.Sync(); err != nil {
+		if err := app.Logger.Sync(); err != nil {
 			fmt.Printf("Failed to sync logger: %v\n", err)
 		}
 	}()
 
-	logger.Info("Starting application...")
+	app.Logger.Info("Starting application...")
 
-	// 1. Инициализация и запуск базы данных
-	db, err := configs.GetUpSQL()
-	if err != nil {
-		logger.Fatal("Failed to connect to database", zap.Error(err))
-	}
-	defer func() {
-		if err := db.Close(); err != nil {
-			logger.Error("Could not close database connection", zap.Error(err))
-		}
-	}()
-	sqlRepo := dataAccess.NewOrdersRepo(db)
-	logger.Info("Database connected")
+	var wg sync.WaitGroup
 
-	// 2. Инициализация и запуск Redis
-	redisCfg := configs.NewRedisConfig()
-	redisClient, err := configs.NewClient(ctx, *redisCfg)
-	if err != nil {
-		logger.Fatal("Failed to create Redis client", zap.Error(err))
-	}
-	defer func() {
-		if err := redisClient.Close(); err != nil {
-			logger.Error("Could not close redis connection", zap.Error(err))
-		}
-	}()
-	redisRepo := redisCache.NewRedisRepository(redisClient, 30*time.Second)
-	logger.Info("Redis connected")
-
-	// 3. Инициализация сервиса данных
-	readService := Services.NewReadDataService(redisRepo, sqlRepo)
-	addService := Services.NewProcessDataService(redisRepo, sqlRepo)
-	logger.Info("Services initialized")
-
-	// 4. Запуск gRPC сервера асинхронно
+	// Запуск gRPC сервера асинхронно
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		logger.Info("Starting gRPC server")
-		grpcConfig.ServerGetUp(readService)
-
-	}()
-
-	// 5. Запуск HTTP сервера асинхронно
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		logger.Info("Starting HTTP server")
-		httpConfig.ServerGetUp(readService)
-	}()
-
-	// 6. Запуск Kafka consumer асинхронно
-	kc := configs.NewKafkaConfig()
-	consumer := kafka.NewKafkaConsumer(kc, post.NewProcessService(addService))
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		logger.Info("Starting Kafka consumer")
-		if err := consumer.Listen(ctx); err != nil {
-			logger.Error("Failed to start consume messages", zap.Error(err))
+		app.Logger.Info("Starting gRPC server")
+		if err := app.GrpcServer.Start(":50051"); err != nil {
+			app.Logger.Fatal("Failed to start gRPC server", zap.Error(err))
 		}
 	}()
 
-	// 7. Ожидание завершения всех горутин
-	logger.Info("All systems are up and running")
+	// Запуск HTTP сервера асинхронно
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		app.Logger.Info("Starting HTTP server")
+		if err := app.HttpServer.Start(":8080"); err != nil {
+			app.Logger.Fatal("Failed to start HTTP server", zap.Error(err))
+		}
+	}()
+
+	// Запуск Kafka consumer асинхронно
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		app.Logger.Info("Starting Kafka consumer")
+		if err := app.KafkaConsumer.Listen(ctx); err != nil {
+			app.Logger.Error("Failed to start consume messages", zap.Error(err))
+		}
+	}()
+
+	app.Logger.Info("All systems are up and running")
 	wg.Wait()
-	logger.Info("Shutting down...")
+	app.Logger.Info("Shutting down...")
+
+	app.GrpcServer.Stop()
+	app.HttpServer.Stop()
 }
