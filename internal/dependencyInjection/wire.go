@@ -1,6 +1,6 @@
 //+build wireinject
 
-package dependencyInjection
+package wireInject
 
 import (
 	"context"
