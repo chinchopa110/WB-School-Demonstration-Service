@@ -3,9 +3,9 @@ package httpConfig
 import (
 	"Demonstration-Service/internal/Application/Contracts/OrdersServices"
 	"Demonstration-Service/internal/Presentation/Servers/HTTP"
-	"net/http"
-
 	"go.uber.org/zap"
+	"net/http"
+	"net/http/pprof"
 )
 
 type Server struct {
@@ -21,10 +21,20 @@ func NewServer(service OrdersServices.IGetService, logger *zap.Logger) *Server {
 	handler = HTTP.Logging(logger, handler)
 	handler = HTTP.PanicRecovery(logger, handler)
 
+	mux := http.NewServeMux()
+
+	mux.HandleFunc("/debug/pprof/", pprof.Index)
+	mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+	mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
+	mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+	mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
+
+	mux.Handle("/", handler)
+
 	return &Server{
 		server:  server,
 		logger:  logger,
-		handler: handler,
+		handler: mux,
 	}
 }
 
