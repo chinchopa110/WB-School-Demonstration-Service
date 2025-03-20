@@ -4,13 +4,16 @@
   "service": "app",
   "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
   "customizations": {
-    "jetbrains": {
-      "backend": "GoLand"
+    "vscode": {
+      "extensions": [
+        "golang.go"
+      ]
     }
   },
   "forwardPorts": [
     5432,
-    9092
+    9092,
+    6379
   ],
   "postCreateCommand": "go version",
   "remoteUser": "vscode"

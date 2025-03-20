@@ -4,6 +4,7 @@ volumes:
   postgres-data:
   redis-data:
   kafka-data:
+  zookeeper-data:
 
 services:
   app:
@@ -12,16 +13,21 @@ services:
       dockerfile: ../build/Dockerfile
     env_file:
       - .env
-    command: sleep infinity
+    command: /app/main
     depends_on:
       - db
-    network_mode: service:db
+      - redis
+      - kafka
+    networks:
+      - app-network
 
   redis:
     image: redis:latest
     restart: unless-stopped
     volumes:
       - redis-data:/data
+    networks:
+      - app-network
 
   kafka:
     image: bitnami/kafka:latest
@@ -32,17 +38,23 @@ services:
       - "9092:9092"
     environment:
       KAFKA_CFG_LISTENERS: PLAINTEXT://0.0.0.0:9092
-      KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
       KAFKA_CFG_ZOOKEEPER_CONNECT: zookeeper:2181
       ALLOW_PLAINTEXT_LISTENER: "yes"
     depends_on:
       - zookeeper
+    networks:
+      - app-network
 
   zookeeper:
     image: bitnami/zookeeper:latest
     restart: unless-stopped
     ports:
       - "2181:2181"
+    volumes:
+      - zookeeper-data:/bitnami/zookeeper
+    networks:
+      - app-network
 
   db:
     image: postgres:latest
@@ -53,3 +65,9 @@ services:
       - postgres-data:/var/lib/postgresql/data
     env_file:
       - .env
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
