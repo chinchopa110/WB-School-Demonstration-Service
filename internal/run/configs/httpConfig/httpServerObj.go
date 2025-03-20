@@ -29,7 +29,7 @@ func NewServer(service OrdersServices.IGetService, logger *zap.Logger) *Server {
 	mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
 	mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
 
-	mux.Handle("/", handler)
+	mux.HandleFunc("/", handler.ServeHTTP)
 
 	return &Server{
 		server:  server,
