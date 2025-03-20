@@ -1,7 +1,7 @@
 package run
 
 import (
-	"Demonstration-Service/internal/dependencyInjection"
+	"Demonstration-Service/internal/run/dependencyInjection"
 	"context"
 	"fmt"
 	"sync"

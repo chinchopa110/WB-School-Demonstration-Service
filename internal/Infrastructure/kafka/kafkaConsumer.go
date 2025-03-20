@@ -2,6 +2,7 @@ package kafka
 
 import (
 	"Demonstration-Service/internal/Infrastructure/post"
+	configs2 "Demonstration-Service/internal/run/configs"
 	"context"
 	"encoding/json"
 	"errors"
@@ -13,18 +14,17 @@ import (
 	"go.uber.org/zap"
 
 	"Demonstration-Service/internal/Application/Domain"
-	"Demonstration-Service/internal/configs"
 )
 
 type Consumer struct {
-	config  *configs.KafkaConfig
+	config  *configs2.KafkaConfig
 	reader  *kafka.Reader
 	logger  *zap.Logger
 	service *post.ProcessService
 }
 
-func NewKafkaConsumer(config *configs.KafkaConfig, service *post.ProcessService) *Consumer {
-	logger, err := configs.InitLogger("logs/kafka.log")
+func NewKafkaConsumer(config *configs2.KafkaConfig, service *post.ProcessService) *Consumer {
+	logger, err := configs2.InitLogger("logs/kafka.log")
 	if err != nil {
 		log.Fatalf("failed to initialize logger: %v", err)
 	}

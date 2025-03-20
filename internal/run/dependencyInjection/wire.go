@@ -1,8 +1,12 @@
-//+build wireinject
+//go:build wireinject
+// +build wireinject
 
-package wireInject
+package dependencyInjection
 
 import (
+	configs2 "Demonstration-Service/internal/run/configs"
+	grpcConfig2 "Demonstration-Service/internal/run/configs/grpcConfig"
+	httpConfig2 "Demonstration-Service/internal/run/configs/httpConfig"
 	"context"
 	"database/sql"
 	"time"
@@ -14,10 +18,6 @@ import (
 	"Demonstration-Service/internal/Infrastructure/post"
 	"Demonstration-Service/internal/Infrastructure/storages/dataAccess"
 	"Demonstration-Service/internal/Infrastructure/storages/redisCache"
-	"Demonstration-Service/internal/configs"
-	"Demonstration-Service/internal/configs/grpcConfig"
-	"Demonstration-Service/internal/configs/httpConfig"
-
 	"github.com/google/wire"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
@@ -27,8 +27,8 @@ func provideLogFilePath() string {
 	return "logs/app.log"
 }
 
-func provideRedisConfig() configs.RedisConfig {
-	return *configs.NewRedisConfig()
+func provideRedisConfig() configs2.RedisConfig {
+	return *configs2.NewRedisConfig()
 }
 
 func provideContext() context.Context {
@@ -46,13 +46,13 @@ func InitializeApplication(ctx context.Context) (*Application, error) {
 		provideCacheExpiration,
 
 		// Логгер
-		configs.InitLogger,
+		configs2.InitLogger,
 
 		// База данных
-		configs.GetUpSQL,
+		configs2.GetUpSQL,
 
 		// Redis
-		configs.NewClient,
+		configs2.NewClient,
 
 		// Репозитории
 		dataAccess.NewOrdersRepo,
@@ -69,11 +69,11 @@ func InitializeApplication(ctx context.Context) (*Application, error) {
 		Services.NewProcessDataService,
 
 		// gRPC и HTTP серверы
-		grpcConfig.ServerGetUp,
-		httpConfig.ServerGetUp,
+		grpcConfig2.ServerGetUp,
+		httpConfig2.ServerGetUp,
 
 		// Kafka consumer
-		configs.NewKafkaConfig,
+		configs2.NewKafkaConfig,
 		kafka.NewKafkaConsumer,
 		post.NewProcessService,
 
@@ -89,8 +89,8 @@ type Application struct {
 	redisClient   *redis.Client
 	readService   *Services.ReadDataService
 	addService    *Services.ProcessDataService
-	GrpcServer    *grpcConfig.Server
-	HttpServer    *httpConfig.Server
+	GrpcServer    *grpcConfig2.Server
+	HttpServer    *httpConfig2.Server
 	KafkaConsumer *kafka.Consumer
 }
 
@@ -100,8 +100,8 @@ func NewApplication(
 	redisClient *redis.Client,
 	readService *Services.ReadDataService,
 	addService *Services.ProcessDataService,
-	GrpcServer *grpcConfig.Server,
-	HttpServer *httpConfig.Server,
+	GrpcServer *grpcConfig2.Server,
+	HttpServer *httpConfig2.Server,
 	KafkaConsumer *kafka.Consumer,
 ) *Application {
 	return &Application{

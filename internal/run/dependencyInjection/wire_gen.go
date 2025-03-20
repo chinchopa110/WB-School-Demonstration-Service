@@ -12,9 +12,9 @@ import (
 	"Demonstration-Service/internal/Infrastructure/post"
 	"Demonstration-Service/internal/Infrastructure/storages/dataAccess"
 	"Demonstration-Service/internal/Infrastructure/storages/redisCache"
-	"Demonstration-Service/internal/configs"
-	"Demonstration-Service/internal/configs/grpcConfig"
-	"Demonstration-Service/internal/configs/httpConfig"
+	configs2 "Demonstration-Service/internal/run/configs"
+	grpcConfig2 "Demonstration-Service/internal/run/configs/grpcConfig"
+	httpConfig2 "Demonstration-Service/internal/run/configs/httpConfig"
 	"context"
 	"database/sql"
 	"github.com/redis/go-redis/v9"
@@ -26,16 +26,16 @@ import (
 
 func InitializeApplication(ctx context.Context) (*Application, error) {
 	string2 := provideLogFilePath()
-	logger, err := configs.InitLogger(string2)
+	logger, err := configs2.InitLogger(string2)
 	if err != nil {
 		return nil, err
 	}
-	db, err := configs.GetUpSQL()
+	db, err := configs2.GetUpSQL()
 	if err != nil {
 		return nil, err
 	}
 	redisConfig := provideRedisConfig()
-	client, err := configs.NewClient(ctx, redisConfig)
+	client, err := configs2.NewClient(ctx, redisConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -44,9 +44,9 @@ func InitializeApplication(ctx context.Context) (*Application, error) {
 	ordersRepo := dataAccess.NewOrdersRepo(db)
 	readDataService := Services.NewReadDataService(redisRepository, ordersRepo)
 	processDataService := Services.NewProcessDataService(redisRepository, ordersRepo)
-	server := grpcConfig.ServerGetUp(readDataService, logger)
-	httpConfigServer := httpConfig.ServerGetUp(readDataService, logger)
-	kafkaConfig := configs.NewKafkaConfig()
+	server := grpcConfig2.ServerGetUp(readDataService, logger)
+	httpConfigServer := httpConfig2.ServerGetUp(readDataService, logger)
+	kafkaConfig := configs2.NewKafkaConfig()
 	processService := post.NewProcessService(processDataService)
 	consumer := kafka.NewKafkaConsumer(kafkaConfig, processService)
 	application := NewApplication(logger, db, client, readDataService, processDataService, server, httpConfigServer, consumer)
@@ -59,8 +59,8 @@ func provideLogFilePath() string {
 	return "logs/app.log"
 }
 
-func provideRedisConfig() configs.RedisConfig {
-	return *configs.NewRedisConfig()
+func provideRedisConfig() configs2.RedisConfig {
+	return *configs2.NewRedisConfig()
 }
 
 func provideContext() context.Context {
@@ -77,8 +77,8 @@ type Application struct {
 	redisClient   *redis.Client
 	readService   *Services.ReadDataService
 	addService    *Services.ProcessDataService
-	GrpcServer    *grpcConfig.Server
-	HttpServer    *httpConfig.Server
+	GrpcServer    *grpcConfig2.Server
+	HttpServer    *httpConfig2.Server
 	KafkaConsumer *kafka.Consumer
 }
 
@@ -88,8 +88,8 @@ func NewApplication(
 	redisClient *redis.Client,
 	readService *Services.ReadDataService,
 	addService *Services.ProcessDataService,
-	GrpcServer *grpcConfig.Server,
-	HttpServer *httpConfig.Server,
+	GrpcServer *grpcConfig2.Server,
+	HttpServer *httpConfig2.Server,
 	KafkaConsumer *kafka.Consumer,
 ) *Application {
 	return &Application{
