@@ -68,6 +68,20 @@ func RunMigrations(db *sql.DB) {
             brand TEXT,
             status INTEGER,
             PRIMARY KEY(chrt_id, order_uid)
+            
+        -- Inbox
+		CREATE TABLE IF NOT EXISTS inbox (
+			message_id VARCHAR(255) PRIMARY KEY,
+			message_type VARCHAR(255) NOT NULL,
+			payload JSONB NOT NULL,
+			status VARCHAR(50) NOT NULL DEFAULT 'pending',
+			processed_at TIMESTAMP,
+			created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+			attempts INT DEFAULT 0,
+			error_message TEXT
+		);
+		
+		CREATE INDEX IF NOT EXISTS idx_inbox_status ON inbox(status);
         );
     `)
 	if err != nil {

@@ -4,10 +4,12 @@ import (
 	"Demonstration-Service/internal/Application/Domain"
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/segmentio/kafka-go"
 	"log"
+	"time"
 )
 
 type OrdersRepo struct {
@@ -185,12 +187,91 @@ func (repo *OrdersRepo) Read(id string) (Domain.Order, error) {
 }
 
 func (repo *OrdersRepo) Save(order Domain.Order, ctx context.Context) error {
-	tx, err := repo.db.Begin()
+	message := ctx.Value("message").(kafka.Message)
+	messageID := message.Key
+	tx, err := repo.db.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("error starting transaction: %w", err)
 	}
 
-	_, err = tx.Exec(`
+	var existingStatus string
+	err = tx.QueryRowContext(ctx, `
+		SELECT status FROM inbox WHERE message_id = $1 FOR UPDATE
+	`, messageID).Scan(&existingStatus)
+
+	if err == nil && existingStatus == "processed" {
+		tx.Rollback()
+		return nil
+	} else if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		tx.Rollback()
+		return fmt.Errorf("error checking inbox: %w", err)
+	}
+
+	payload, err := json.Marshal(order)
+	if err != nil {
+		tx.Rollback()
+		return fmt.Errorf("error marshaling order: %w", err)
+	}
+
+	if errors.Is(err, sql.ErrNoRows) {
+		_, err = tx.ExecContext(ctx, `
+			INSERT INTO inbox (message_id, message_type, payload, status)
+			VALUES ($1, $2, $3, 'processing')
+		`, messageID, "order_created", payload)
+	} else {
+		_, err = tx.ExecContext(ctx, `
+			UPDATE inbox 
+			SET status = 'processing', 
+				attempts = attempts + 1,
+				error_message = NULL
+			WHERE message_id = $1
+		`, messageID)
+	}
+
+	if err != nil {
+		tx.Rollback()
+		return fmt.Errorf("error updating inbox: %w", err)
+	}
+
+	if err := repo.saveOrderTx(tx, order); err != nil {
+		_, rbErr := tx.ExecContext(ctx, `
+			UPDATE inbox 
+			SET status = 'failed', 
+				error_message = $1
+			WHERE message_id = $2
+		`, err.Error(), messageID)
+		if rbErr != nil {
+			log.Printf("failed to update inbox status: %v", rbErr)
+		}
+		tx.Rollback()
+		return fmt.Errorf("error saving order: %w", err)
+	}
+
+	_, err = tx.ExecContext(ctx, `
+		UPDATE inbox 
+		SET status = 'processed',
+			processed_at = NOW()
+		WHERE message_id = $1
+	`, messageID)
+	if err != nil {
+		tx.Rollback()
+		return fmt.Errorf("error marking message as processed: %w", err)
+	}
+
+	if reader, ok := ctx.Value("message reader").(*kafka.Reader); ok {
+		if message, ok := ctx.Value("message").(kafka.Message); ok {
+			if err := reader.CommitMessages(ctx, message); err != nil {
+				tx.Rollback()
+				return fmt.Errorf("error committing kafka message: %w", err)
+			}
+		}
+	}
+
+	return tx.Commit()
+}
+
+func (repo *OrdersRepo) saveOrderTx(tx *sql.Tx, order Domain.Order) error {
+	_, err := tx.Exec(`
         INSERT INTO orders ( order_uid,
                             track_number,
                             entry,
@@ -216,9 +297,6 @@ func (repo *OrdersRepo) Save(order Domain.Order, ctx context.Context) error {
 		order.DateCreated,
 		order.OofShard)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		if rollbackErr := tx.Rollback(); rollbackErr != nil {
-			log.Printf("error rolling back transaction for inserting into orders table: %v, original error %v", rollbackErr, err)
-		}
 		return fmt.Errorf("error inserting into orders table: %w for order_uid: %s", err, order.OrderUID)
 	}
 
@@ -241,11 +319,7 @@ func (repo *OrdersRepo) Save(order Domain.Order, ctx context.Context) error {
 		order.Delivery.Address,
 		order.Delivery.Region,
 		order.Delivery.Email)
-
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		if rollbackErr := tx.Rollback(); rollbackErr != nil {
-			log.Printf("error rolling back transaction for inserting into deliveries table: %v, original error %v", rollbackErr, err)
-		}
 		return fmt.Errorf("error inserting into deliveries table: %w for order_uid: %s", err, order.OrderUID)
 	}
 
@@ -275,9 +349,6 @@ func (repo *OrdersRepo) Save(order Domain.Order, ctx context.Context) error {
 		order.Payment.GoodsTotal,
 		order.Payment.CustomFee)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		if rollbackErr := tx.Rollback(); rollbackErr != nil {
-			log.Printf("error rolling back transaction for inserting into items table: %v, original error %v", rollbackErr, err)
-		}
 		return fmt.Errorf("error inserting into payments table: %w for order_uid: %s", err, order.OrderUID)
 	}
 
@@ -310,23 +381,107 @@ func (repo *OrdersRepo) Save(order Domain.Order, ctx context.Context) error {
 			item.Brand,
 			item.Status)
 		if err != nil && !errors.Is(err, sql.ErrNoRows) {
-			if rollbackErr := tx.Rollback(); rollbackErr != nil {
-				log.Printf("error rolling back transaction for inserting into items table: %v, original error %v", rollbackErr, err)
-			}
 			return fmt.Errorf("error inserting into items table: %w for order_uid: %s and chrt_id %d", err, order.OrderUID, item.ChrtID)
 		}
 	}
 
-	err = tx.Commit()
-	if err != nil {
-		return fmt.Errorf("error committing transaction: %w", err)
-	}
-
-	reader := ctx.Value("message reader").(*kafka.Reader)
-	message := ctx.Value("message").(kafka.Message)
-
-	if err := reader.CommitMessages(ctx, message); err != nil {
-		return fmt.Errorf("error committing message: %w", err)
-	}
 	return nil
+}
+
+func (repo *OrdersRepo) ProcessFailedMessages(ctx context.Context, maxAttempts int, interval time.Duration) {
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			repo.retryFailedMessages(ctx, maxAttempts)
+		}
+	}
+}
+
+func (repo *OrdersRepo) retryFailedMessages(ctx context.Context, maxAttempts int) {
+	tx, err := repo.db.BeginTx(ctx, nil)
+	if err != nil {
+		log.Printf("Failed to begin transaction: %v", err)
+		return
+	}
+
+	rows, err := tx.QueryContext(ctx, `
+		SELECT message_id, payload 
+		FROM inbox 
+		WHERE status = 'failed' 
+		AND attempts < $1
+		ORDER BY created_at 
+		FOR UPDATE SKIP LOCKED 
+		LIMIT 100
+	`, maxAttempts)
+	if err != nil {
+		tx.Rollback()
+		log.Printf("Failed to query inbox: %v", err)
+		return
+	}
+	defer rows.Close()
+
+	var messages []struct {
+		ID      string
+		Payload []byte
+	}
+
+	for rows.Next() {
+		var msg struct {
+			ID      string
+			Payload []byte
+		}
+		if err := rows.Scan(&msg.ID, &msg.Payload); err != nil {
+			tx.Rollback()
+			log.Printf("Failed to scan inbox row: %v", err)
+			return
+		}
+		messages = append(messages, msg)
+	}
+
+	if len(messages) == 0 {
+		tx.Rollback()
+		return
+	}
+
+	for _, msg := range messages {
+		var order Domain.Order
+		if err := json.Unmarshal(msg.Payload, &order); err != nil {
+			log.Printf("Failed to unmarshal order: %v", err)
+			continue
+		}
+
+		if err := repo.saveOrderTx(tx, order); err != nil {
+			_, rbErr := tx.ExecContext(ctx, `
+				UPDATE inbox 
+				SET status = 'failed', 
+					error_message = $1,
+					attempts = attempts + 1
+				WHERE message_id = $2
+			`, err.Error(), msg.ID)
+			if rbErr != nil {
+				log.Printf("failed to update inbox status: %v", rbErr)
+			}
+			continue
+		}
+
+		_, err = tx.ExecContext(ctx, `
+			UPDATE inbox 
+			SET status = 'processed',
+				processed_at = NOW()
+			WHERE message_id = $1
+		`, msg.ID)
+		if err != nil {
+			log.Printf("failed to mark message as processed: %v", err)
+			continue
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		log.Printf("Failed to commit transaction: %v", err)
+	}
 }

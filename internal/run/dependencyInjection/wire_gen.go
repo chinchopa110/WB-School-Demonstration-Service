@@ -42,6 +42,7 @@ func InitializeApplication(ctx context.Context) (*Application, error) {
 	duration := provideCacheExpiration()
 	redisRepository := redisCache.NewRedisRepository(client, duration)
 	ordersRepo := dataAccess.NewOrdersRepo(db)
+	go ordersRepo.ProcessFailedMessages(ctx, 3, 30*time.Second)
 	readDataService := Services.NewReadDataService(redisRepository, ordersRepo)
 	processDataService := Services.NewProcessDataService(redisRepository, ordersRepo)
 	server := grpcConfig2.ServerGetUp(readDataService, logger)
