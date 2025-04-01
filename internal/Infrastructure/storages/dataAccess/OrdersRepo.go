@@ -266,7 +266,6 @@ func (repo *OrdersRepo) Save(order Domain.Order, ctx context.Context) error {
 	if reader, ok := ctx.Value("message reader").(*kafka.Reader); ok {
 		if message, ok := ctx.Value("message").(kafka.Message); ok {
 			if err := reader.CommitMessages(ctx, message); err != nil {
-				tx.Rollback()
 				return fmt.Errorf("error committing kafka message: %w", err)
 			}
 		}
