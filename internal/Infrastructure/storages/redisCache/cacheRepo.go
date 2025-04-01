@@ -57,9 +57,7 @@ func (r *RedisRepository) Read(id string) (Domain.Order, error) {
 	return order, nil
 }
 
-func (r *RedisRepository) Save(order Domain.Order) error {
-	ctx := context.Background()
-
+func (r *RedisRepository) Save(order Domain.Order, ctx context.Context) error {
 	orderBytes, err := json.Marshal(order)
 	if err != nil {
 		return fmt.Errorf("failed to marshal order: %w", err)

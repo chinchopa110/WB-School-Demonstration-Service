@@ -3,6 +3,7 @@ package Services
 import (
 	"Demonstration-Service/internal/Application/Abstractions/Repos"
 	"Demonstration-Service/internal/Application/Domain"
+	"context"
 	"fmt"
 	"log"
 )
@@ -29,7 +30,7 @@ func (service *ReadDataService) GetById(id string) (Domain.Order, error) {
 		return Domain.Order{}, fmt.Errorf("order not found in db for id: %s, %w", id, err)
 	}
 
-	err = service.cashRepo.Save(order)
+	err = service.cashRepo.Save(order, context.Background())
 	if err != nil {
 		log.Printf("failed to save order in cash for id: %s, %v", id, err)
 	}

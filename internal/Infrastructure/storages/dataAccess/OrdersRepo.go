@@ -2,9 +2,11 @@ package dataAccess
 
 import (
 	"Demonstration-Service/internal/Application/Domain"
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/segmentio/kafka-go"
 	"log"
 )
 
@@ -182,7 +184,7 @@ func (repo *OrdersRepo) Read(id string) (Domain.Order, error) {
 	return order, nil
 }
 
-func (repo *OrdersRepo) Save(order Domain.Order) error {
+func (repo *OrdersRepo) Save(order Domain.Order, ctx context.Context) error {
 	tx, err := repo.db.Begin()
 	if err != nil {
 		return fmt.Errorf("error starting transaction: %w", err)
@@ -318,6 +320,13 @@ func (repo *OrdersRepo) Save(order Domain.Order) error {
 	err = tx.Commit()
 	if err != nil {
 		return fmt.Errorf("error committing transaction: %w", err)
+	}
+
+	reader := ctx.Value("message reader").(*kafka.Reader)
+	message := ctx.Value("message").(kafka.Message)
+
+	if err := reader.CommitMessages(ctx, message); err != nil {
+		return fmt.Errorf("error committing message: %w", err)
 	}
 	return nil
 }

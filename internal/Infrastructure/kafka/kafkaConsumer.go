@@ -76,14 +76,10 @@ func (kc *Consumer) Listen(ctx context.Context) error {
 				kc.logger.Error("failed to unmarshal kafka message", zap.Error(err))
 				continue
 			}
-
-			err = kc.service.ProcessMessage(order)
+			messageCtx := context.WithValue(ctx, "message", message)
+			err = kc.service.ProcessMessage(order, context.WithValue(messageCtx, "message reader", kc.reader))
 			if err != nil {
 				kc.logger.Error("failed to process message", zap.Error(err), zap.Any("order", order))
-			}
-
-			if err := kc.reader.CommitMessages(ctx, message); err != nil {
-				kc.logger.Error("failed to commit kafka message", zap.Error(err))
 			}
 		}
 	}

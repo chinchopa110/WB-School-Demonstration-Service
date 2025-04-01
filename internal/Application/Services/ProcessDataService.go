@@ -4,6 +4,7 @@ import (
 	"Demonstration-Service/internal/Application/Abstractions/Repos"
 	"Demonstration-Service/internal/Application/Domain"
 	"Demonstration-Service/internal/Application/Services/validator"
+	"context"
 	"errors"
 	"fmt"
 	"sync"
@@ -18,7 +19,7 @@ func NewProcessDataService(cashService Repos.CashStorage, dbRepo Repos.DBStorage
 	return &ProcessDataService{cashRepo: cashService, dbRepo: dbRepo}
 }
 
-func (service *ProcessDataService) AddOrder(order Domain.Order) error {
+func (service *ProcessDataService) AddOrder(order Domain.Order, ctx context.Context) error {
 	if err := validator.ValidateOrder(order); err != nil {
 		return fmt.Errorf("validation error: %w", err)
 	}
@@ -31,7 +32,7 @@ func (service *ProcessDataService) AddOrder(order Domain.Order) error {
 
 	go func() {
 		defer wg.Done()
-		err := service.cashRepo.Save(order)
+		err := service.cashRepo.Save(order, ctx)
 		if err != nil {
 			errChan <- fmt.Errorf("cash repo error: %w", err)
 			return
@@ -41,7 +42,7 @@ func (service *ProcessDataService) AddOrder(order Domain.Order) error {
 
 	go func() {
 		defer wg.Done()
-		err := service.dbRepo.Save(order)
+		err := service.dbRepo.Save(order, ctx)
 		if err != nil {
 			errChan <- fmt.Errorf("db repo error: %w", err)
 			return
