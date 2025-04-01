@@ -267,7 +267,12 @@ func (repo *OrdersRepo) Save(order Domain.Order, ctx context.Context) error {
 		}
 	}
 
-	return tx.Commit()
+	if err := tx.Commit(); err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return nil
 }
 
 func (repo *OrdersRepo) saveOrderTx(tx *sql.Tx, order Domain.Order) error {
