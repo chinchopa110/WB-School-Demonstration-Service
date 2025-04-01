@@ -258,6 +258,11 @@ func (repo *OrdersRepo) Save(order Domain.Order, ctx context.Context) error {
 		return fmt.Errorf("error marking message as processed: %w", err)
 	}
 
+	if err := tx.Commit(); err != nil {
+		tx.Rollback()
+		return err
+	}
+
 	if reader, ok := ctx.Value("message reader").(*kafka.Reader); ok {
 		if message, ok := ctx.Value("message").(kafka.Message); ok {
 			if err := reader.CommitMessages(ctx, message); err != nil {
@@ -265,11 +270,6 @@ func (repo *OrdersRepo) Save(order Domain.Order, ctx context.Context) error {
 				return fmt.Errorf("error committing kafka message: %w", err)
 			}
 		}
-	}
-
-	if err := tx.Commit(); err != nil {
-		tx.Rollback()
-		return err
 	}
 
 	return nil
