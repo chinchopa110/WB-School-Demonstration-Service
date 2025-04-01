@@ -188,6 +188,7 @@ func (repo *OrdersRepo) Read(id string) (Domain.Order, error) {
 
 func (repo *OrdersRepo) Save(order Domain.Order, ctx context.Context) error {
 	message := ctx.Value("message").(kafka.Message)
+	reader := ctx.Value("message reader").(*kafka.Reader)
 	messageID := message.Key
 	tx, err := repo.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -201,6 +202,9 @@ func (repo *OrdersRepo) Save(order Domain.Order, ctx context.Context) error {
 
 	if err == nil && existingStatus == "processed" {
 		tx.Rollback()
+		if err := reader.CommitMessages(ctx, message); err != nil {
+			return fmt.Errorf("error committing kafka message: %w", err)
+		}
 		return nil
 	} else if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		tx.Rollback()
@@ -263,12 +267,8 @@ func (repo *OrdersRepo) Save(order Domain.Order, ctx context.Context) error {
 		return err
 	}
 
-	if reader, ok := ctx.Value("message reader").(*kafka.Reader); ok {
-		if message, ok := ctx.Value("message").(kafka.Message); ok {
-			if err := reader.CommitMessages(ctx, message); err != nil {
-				return fmt.Errorf("error committing kafka message: %w", err)
-			}
-		}
+	if err := reader.CommitMessages(ctx, message); err != nil {
+		return fmt.Errorf("error committing kafka message: %w", err)
 	}
 
 	return nil
